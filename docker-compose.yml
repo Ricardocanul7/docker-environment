@@ -1,0 +1,54 @@
+services:
+  traefik:
+    image: "traefik:v2.11"
+    container_name: "${ENV_NAME:-dev}_traefik"
+    restart: unless-stopped
+    command:
+      #- --log.level=DEBUG
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - app_network
+
+  db:
+    # platform: linux/x86_64
+    container_name: ${ENV_NAME:-dev}_db
+    image: mysql:5.7
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-root}
+    volumes:
+      - data-db:/var/lib/mysql
+      # - ./app/docker/db:/dumps
+    command: mysqld --sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION'
+    ports:
+      - "3306:3306"
+    networks:
+      - app_network
+      
+  mailcatcher:
+    container_name: ${ENV_NAME:-dev}_mailcatcher
+    restart: unless-stopped
+    image: dockage/mailcatcher:0.9.0
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - app_network
+
+volumes:
+  data-db:
+    name: ${ENV_NAME:-dev}_db
+
+networks:
+  app_network:
+    name: ${ENV_NAME:-dev}_network
